@@ -25,117 +25,106 @@ _%>
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
-import { SERVER_API_URL } from '../../app.constants';
 <%_ if (hasDate) { _%>
-
-import { JhiDateUtils } from 'ng-jhipster';
+import * as moment from 'moment';
 <%_ } _%>
 
-import { <%= entityAngularName %> } from './<%= entityFileName %>.model';
+import { SERVER_API_URL } from '../../app.constants';
 import { createRequestOption } from '../../shared';
+import { <%= entityAngularName %> } from './<%= entityFileName %>.model';
 
-export type EntityResponseType = HttpResponse<<%= entityAngularName %>>;
+type EntityResponseType = HttpResponse<<%= entityAngularName %>>;
+type EntityArrayResponseType = HttpResponse<<%= entityAngularName %>[]>;
 
 @Injectable()
 export class <%= entityAngularName %>Service {
 
     private resourceUrl =  SERVER_API_URL + '<% if (applicationType === 'gateway' && locals.microserviceName) { %><%= microserviceName.toLowerCase() %>/<% } %>api/<%= entityApiUrl %>';
-    <%_ if(searchEngine === 'elasticsearch') { _%>
+    <%_ if (searchEngine === 'elasticsearch') { _%>
     private resourceSearchUrl = SERVER_API_URL + '<% if (applicationType === 'gateway' && locals.microserviceName) { %><%= microserviceName.toLowerCase() %>/<% } %>api/_search/<%= entityApiUrl %>';
     <%_ } _%>
 
-    constructor(private http: HttpClient<% if (hasDate) { %>, private dateUtils: JhiDateUtils<% } %>) { }
-    <%_ if (entityAngularName.length <= 30) { _%>
+    constructor(private http: HttpClient) { }
 
+    <%_ if (entityAngularName.length <= 30) { _%>
     create(<%= entityInstance %>: <%= entityAngularName %>): Observable<EntityResponseType> {
     <%_ } else { _%>
-
     create(<%= entityInstance %>: <%= entityAngularName %>):
         Observable<EntityResponseType> {
     <%_ } _%>
-        const copy = this.convert(<%= entityInstance %>);
-        return this.http.post<<%= entityAngularName %>>(this.resourceUrl, copy, { observe: 'response' })
-            .map((res: EntityResponseType) => this.convertResponse(res));
+        <%_ if (hasDate) { _%>
+        const copy = this.convertDateFromClient(<%= entityInstance %>);
+        <%_ } _%>
+            return this.http.post<<%= entityAngularName %>>(this.resourceUrl,
+                    <%_ if (hasDate) { _%> copy <%_ } else { _%> <%= entityInstance %> <%_ } _%>,
+                    { observe: 'response' })
+            <%_ if (hasDate) { _%>.map((res: EntityResponseType) => this.convertDateFromServer(res))<%_ } _%>;
     }
-    <%_ if (entityAngularName.length <= 30) { _%>
 
+    <%_ if (entityAngularName.length <= 30) { _%>
     update(<%= entityInstance %>: <%= entityAngularName %>): Observable<EntityResponseType> {
     <%_ } else { _%>
-
     update(<%= entityInstance %>: <%= entityAngularName %>):
         Observable<EntityResponseType> {
     <%_ } _%>
-        const copy = this.convert(<%= entityInstance %>);
-        return this.http.put<<%= entityAngularName %>>(this.resourceUrl, copy, { observe: 'response' })
-            .map((res: EntityResponseType) => this.convertResponse(res));
+        <%_ if (hasDate) { _%>
+        const copy = this.convertDateFromClient(<%= entityInstance %>);
+        <%_ } _%>
+            return this.http.put<<%= entityAngularName %>>(this.resourceUrl,
+                    <%_ if (hasDate) { _%> copy <%_ } else { _%> <%= entityInstance %> <%_ } _%>,
+                    { observe: 'response' })
+            <%_ if (hasDate) { _%>.map((res: EntityResponseType) => this.convertDateFromServer(res))<%_ } _%>;
     }
 
     find(id: <% if (pkType === 'String') { %>string<% } else { %>number<% } %>): Observable<EntityResponseType> {
         return this.http.get<<%= entityAngularName %>>(`${this.resourceUrl}/${id}`, { observe: 'response'})
-            .map((res: EntityResponseType) => this.convertResponse(res));
+            <%_ if (hasDate) { _%>.map((res: EntityResponseType) => this.convertDateFromServer(res))<%_ } _%>;
     }
 
-    query(req?: any): Observable<HttpResponse<<%= entityAngularName %>[]>> {
+    query(req?: any): Observable<EntityArrayResponseType> {
         const options = createRequestOption(req);
         return this.http.get<<%= entityAngularName %>[]>(this.resourceUrl, { params: options, observe: 'response' })
-            .map((res: HttpResponse<<%= entityAngularName %>[]>) => this.convertArrayResponse(res));
+            <%_ if (hasDate) { _%>.map((res: EntityArrayResponseType) => this.convertDateArrayFromServer(res))<%_ } _%>;
     }
 
     delete(id: <% if (pkType === 'String') { %>string<% } else { %>number<% } %>): Observable<HttpResponse<any>> {
         return this.http.delete<any>(`${this.resourceUrl}/${id}`, { observe: 'response'});
     }
-    <%_ if(searchEngine === 'elasticsearch') { _%>
 
-    search(req?: any): Observable<HttpResponse<<%= entityAngularName %>[]>> {
+    <%_ if (searchEngine === 'elasticsearch') { _%>
+    search(req?: any): Observable<EntityArrayResponseType> {
         const options = createRequestOption(req);
         return this.http.get<<%= entityAngularName %>[]>(this.resourceSearchUrl, { params: options, observe: 'response' })
-            .map((res: HttpResponse<<%= entityAngularName %>[]>) => this.convertArrayResponse(res));
+            <%_ if (hasDate) { _%>.map((res: EntityArrayResponseType) => this.convertDateArrayFromServer(res))<%_ } _%>;
     }
     <%_ } _%>
 
-    private convertResponse(res: EntityResponseType): EntityResponseType {
-        const body: <%= entityAngularName %> = this.convertItemFromServer(res.body);
-        return res.clone({body});
-    }
-
-    private convertArrayResponse(res: HttpResponse<<%= entityAngularName %>[]>): HttpResponse<<%= entityAngularName %>[]> {
-        const jsonResponse: <%= entityAngularName %>[] = res.body;
-        const body: <%= entityAngularName %>[] = [];
-        for (let i = 0; i < jsonResponse.length; i++) {
-            body.push(this.convertItemFromServer(jsonResponse[i]));
-        }
-        return res.clone({body});
-    }
-
-    /**
-     * Convert a returned JSON object to <%= entityAngularName %>.
-     */
-    private convertItemFromServer(<%= entityInstance %>: <%= entityAngularName %>): <%= entityAngularName %> {
-        const copy: <%= entityAngularName %> = Object.assign({}, <%= entityInstance %>);
+    <%_ if (hasDate) { _%>
+    private convertDateFromClient(<%= entityInstance %>: <%= entityAngularName %>): <%= entityAngularName %> {
+        const copy: <%= entityAngularName %> = Object.assign({}, <%= entityInstance %>, {
         <%_ for (idx in fields) { _%>
-        <%_ if (fields[idx].fieldType === 'LocalDate') { _%>
-        copy.<%=fields[idx].fieldName%> = this.dateUtils
-            .convertLocalDateFromServer(<%= entityInstance %>.<%=fields[idx].fieldName%>);
+        <%_ if ( ['Instant', 'ZonedDateTime', 'LocalDate'].includes(fields[idx].fieldType) ) { _%>
+        <%= fields[idx].fieldName %>: <%= entityInstance %>.<%= fields[idx].fieldName %> != null && <%= entityInstance %>.<%= fields[idx].fieldName %>.isValid() ? <%= entityInstance %>.<%= fields[idx].fieldName %>.toJSON() : null,
+        });
         <%_ } _%>
-        <%_ if (['Instant', 'ZonedDateTime'].includes(fields[idx].fieldType)) { _%>
-        copy.<%=fields[idx].fieldName%> = this.dateUtils
-            .convertDateTimeFromServer(<%= entityInstance %>.<%=fields[idx].fieldName%>);
-            <%_ } _%>
         <%_ } _%>
         return copy;
     }
+    <%_ } _%>
 
-    /**
-     * Convert a <%= entityAngularName %> to a JSON which can be sent to the server.
-     */
-    private convert(<%= entityInstance %>: <%= entityAngularName %>): <%= entityAngularName %> {
-        const copy: <%= entityAngularName %> = Object.assign({}, <%= entityInstance %>);
-        <%_ for (idx in fields){ if (fields[idx].fieldType === 'LocalDate') { _%>
-        copy.<%=fields[idx].fieldName%> = this.dateUtils
-            .convertLocalDateToServer(<%= entityInstance %>.<%=fields[idx].fieldName%>);
-        <%_ } if (['Instant', 'ZonedDateTime'].includes(fields[idx].fieldType)) { %>
-        copy.<%=fields[idx].fieldName%> = this.dateUtils.toDate(<%= entityInstance %>.<%=fields[idx].fieldName%>);
-        <%_ } } _%>
-        return copy;
+    <%_ if (hasDate) { _%>
+    private convertDateFromServer(res: EntityResponseType): EntityResponseType {
+        res.body.date = res.body.date != null ? moment(res.body.date) : res.body.date;
+        return res;
     }
+    <%_ } _%>
+
+    <%_ if (hasDate) { _%>
+    private convertDateArrayFromServer(res: EntityArrayResponseType): EntityArrayResponseType {
+        for (let i = 0; i < res.body.length; i++) {
+            res.body[i].date = res.body[i].date != null ? moment(res.body[i].date) : res.body[i].date;
+        }
+        return res;
+    }
+    <%_ } _%>
 }
