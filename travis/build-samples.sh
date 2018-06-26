@@ -1477,7 +1477,7 @@ function verifyProject() {
     # ====================
     # Corresponding of the entry "script" in .travis.yml
     cd "$APP_FOLDER"
-    if [[ -f src/main/docker/couchbase.yml ]]; then
+    if [[ -f src/main/docker/couchbase.yml ]] ; then
         printCommandAndEval "pwd -P"
         printFileDescriptor3 "../../scripts/04Test and" \
             "../../scripts/05run.sh can't be started" \
