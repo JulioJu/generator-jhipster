@@ -1812,7 +1812,7 @@ function launchSamplesInBackground() {
     read -rt 1 -n 10000 _ || echo ""
     echo
     local question="How many processes \
-do you want to launch in same time (Travis CI launch 4 processes)? "
+do you want to launch in same time [ACTUALLY YOU MUST ANSWER '1']? "
     local -i typeAnswer=1
     while [[ "$typeAnswer" -eq 1 ]] ; do
         read -p "$question" -n 1 -r
